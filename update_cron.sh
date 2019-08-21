@@ -39,7 +39,7 @@ print_title
 check_update
 
 
-Réalisez un script qui met à jour l’ensemble des sources de package
-puis de vos packages et 
-qui log l’ensemble dans un fichier nommé /var/log/update_script.log.
- Créez une tache planifiée pour ce script une fois par semaine à 4h00 du matin et à chaque reboot de la machine.
+#Réalisez un script qui met à jour l’ensemble des sources de package
+#puis de vos packages et 
+#qui log l’ensemble dans un fichier nommé /var/log/update_script.log.
+# Créez une tache planifiée pour ce script une fois par semaine à 4h00 du matin et à chaque reboot de la machine.
