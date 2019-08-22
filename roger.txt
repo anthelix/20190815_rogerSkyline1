@@ -327,3 +327,13 @@ tail -f /var/log/cron.log
 log_file='/var/log/update_script.log'
 
 apt-get update >> $log_file 2>&1 && apt-get upgrade -y >> $log_file 2>&1	
+
+
+ /usr/sbin/anacron || ( cd / && run-parts --report /etc/cron.monthly )
+
+
+!! Il est aussi important de noter que le fichier crontab de l'utilisateur système root peut être édité avec l'instruction `sudo crontab -e`
+ Dans ce cas il ne faut pas préciser l'utilisateur sinon root est compris comme une instruction à exécuter et il ne se passera rien. 
+
+verifier que cron est en fonction
+ps -aux|grep cron
