@@ -240,14 +240,90 @@ sudo service portsentry restart
 —————————————————————
 #cron
 
-• Réalisez un script qui met à jour l’ensemble des sources de package, puis de vos packages et qui log l’ensemble dans un fichier nommé /var/log/update_script.log. Créez une tache planifiée pour ce script une fois par semaine à 4h00 du matin et à chaque reboot de la machine.
+• Réalisez un script qui met à jour l’ensemble des sources de package, puis de vos packages et qui log l’ensemble dans un fichier nommé /var/log/update_script.log. 
+• Créez une tache planifiée pour ce script une fois par semaine à 4h00 du matin et à chaque reboot de la machine.
+
+cat /var/log/update_script.log pour afficher le fichier
+sudo sh ./update_cron.sh pour executer le script
+~/RogerGit/update_cron —> localisation du fichier
+
+
+
+
+Accueil > Commandes Linux de base > Cron : gestion des tâches planifiées
+Cron : gestion des tâches planifiées
+
+    deliciousdiggfacebookseenthistechnoratitwitter
+
+Table des matières
+
+    Où Cron trouve-t-il les tâches à effectuer
+    La syntaxe des fichiers de Cron
+    Le Cron des utilisateurs
+    Les notifications du Cron
+
+Cron est un programme disponible sur les systèmes de type Unix (Linux, Mac Osx ...) permettant de planifier des taches régulières. Il est en effet intéressant que les tâches habituelles soient réalisées automatiquement par le système plutôt que d’avoir à les lancer manuellement en tant qu’utilisateur.
+
+Cron est un démon, il tourne donc en tâche de fond du système. Il peut donc être arrêté, démarré ou redémarrer avec la commande :
+
+    /etc/init.d/cron start|stop|restart
+
+Copier dans le presse-papier
+Où Cron trouve-t-il les tâches à effectuer Retour à la table des matières
+
+Les tâches Cron peuvent être programmées par l’installation de logiciels ou par les utilisateurs.
+
+Les logiciels installés nécessitant des tâches planifiées les mettent dans les répertoires suivants :
+
+    /etc/cron.d
+    /etc/cron.hourly
+    /etc/cron.daily
+    /etc/cron.weekly
+    /etc/cron.monthly
+
+Télécharger - Copier dans le presse-papier
+
+Comme leur noms l’indiquent les 4 derniers répertoires définissent un intervalle de temps entre les tâches : chaque heure, chaque jour, chaque semaine, chaque mois.
+
+Chaque fichier de ces répertoires sont des scripts (en général bash) qui seront exécutés.
+
+Par exemple, Apache2 installe un fichier /etc/cron.daily/apache2 lançant chaque jour le nétoyage de son cache.
+
+Les fichiers définissant les tâches Cron par utilisateur sont situés dans le répertoire /var/spool/cron. Ils ne doivent pas être modifiés directement mais via la commande crontab
+
+“Il existe également un fichier /etc/crontab qu’il n’est pas recommandé de modifier, mais plutôt d’utiliser la méthode précédente (tâches de l’utilisateur)”.
+
+
 
 sudo systemctl enable cron
+cat /etc/crontab
 crontab -l : afficher crontab
- crontab -e :  modifier la crontab
+crontab -e :  modifier la crontab et le creer si n’existe pas pas 
+	    @reboot root sh /home/
+	    0 4 * * 0 root sh /
 
-sudo apt-get
+Pour exécuter une commande une seule fois, juste après le démarrage de l'ordinateur, on peut recourir à la macro @reboot (un simple redémarrage de cron ne déclenche pas une commande planifiée avec @reboot). Cette macro remplace elle aussi les cinq premiers champs d'une entrée dans la crontab. 
 
+@reboot root sh /home/
 
+******************
+Pour avoir le journal de log de cron:
 
-	
+nano /etc/rsyslog.conf
+Enlever # devant cron
+sudo service rsyslog restart
+sudo service cron restart
+tail -f /var/log/cron.log
+******************
+#!/usr/bin/env bash
+
+##
+## Packages upgrade script initialisation
+## To schedule the upgrade, add the following lines to /etc/crontab:
+##      @reboot root sh /home/roger/package_upgrade.sh
+##      0 4 * * 0 root sh /home/roger/package_upgrade.sh
+##
+
+log_file='/var/log/update_script.log'
+
+apt-get update >> $log_file 2>&1 && apt-get upgrade -y >> $log_file 2>&1	
