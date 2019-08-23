@@ -353,3 +353,5 @@ pas toucher ) Si tu souhaites exécuter des tâches nécessitant des droits plus
 crontab utilisateur, soit tu te mets en root et tu édites sa table crontab "crontab -e" 
 
 sudo crontab -u castor -e
+
+!!!! 2>&1 means "redirect all output to stderr to the same place that stdout is going
