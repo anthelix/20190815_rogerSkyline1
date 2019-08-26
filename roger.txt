@@ -405,15 +405,20 @@ si quelque chose bloque, vous aurez une erreur. (4xx si le pb vient de vous, 5xx
 
 !!! Quand vous travaillez sur un site apache, désactiver provisoirement le cache de votre navigateur (ou le mettre a zéro), 
 cela pourra vous éviter des résultats bizarres liés au fait d'avoir oublié de vider le cache) 
+******
+Dans /etc/apache2/sites-available, faire sudo nano /etc/apache2/apache2.conf
+ajouter en fin de fichier
+>>ServerName 10.11.200.184
+Evite message d'erreur de Apache2
 
-mkdir /home/polux/www/html
+>>mkdir /var/www/html
 pour garder fichier propre copie de travail
-sudo cp /etc/apache2/sites-available/000-default.conf /etc/apache2/sites-available/000-prod.conf
-sudo nano /etc/apache2/sites-available/000-prod.conf
+>>sudo cp /etc/apache2/sites-available/000-default.conf /etc/apache2/sites-available/000-prod.conf
+>>sudo nano /etc/apache2/sites-available/000-prod.conf
 dans 000-prod.conf, faire pointer DocumentRoot sur 
-	DocumentRoot /home/polux/www/html
+>>	DocumentRoot /var/www/html
 
-sudo nano /etc/apache2/apache2.conf
+>>sudo nano /etc/apache2/apache2.conf
 Ajouter son repertoir model de securite:
 Définit le modèle de sécurité par défaut du serveur Apache2 HTTPD. Il n'autorise pas l'accès au système de fichiers racine 
 en dehors de /usr/share et /var/www.
@@ -421,17 +426,26 @@ Le premier est utilisé par les applications web empaquetées dans Debian, le se
 locaux servis par le serveur web. Si votre système sert du contenu à partir d'un sous-répertoire dans /srv, vous devez autoriser 
 l'accès ici, ou dans tout hôte virtuel associé.
 le faire sur le meme modele que <Directory /srv/>
+>>
 <Directory /home/polux/www/html>
         Options Indexes FollowSymLinks
         AllowOverride None
         Require all granted
 </Directory>
 
+La configuration de virtualhosts sur le serveur Apache permet à un même serveur d’héberger plusieurs 
+sites différents, soit de domaines différents (domaine1.example, domaine2.example...) ou de sous-domaine 
+d’un même nom de domaine (ssdom1.domaine1.example, ssdom2.domaine1.example, ssdom3.domaine1.example...).
+
+
+
+
 desactiver le site par default et activer le sien
-sudo a2dissite /etc/apache2/sites-available/000-default.conf 
+>>aller dans /etc/apache2/sites-available/
+>>sudo a2dissite 000-default.conf 
 Activer ce site en créant un lien symbolique dans /etc/apache2/sites-enabled/
-sudo a2ensite 000-prod.conf
-sudo systemctl reload apache2
+>>sudo a2ensite 000-prod.conf
+>>sudo systemctl reload apache2
 
 probleme d'encodage
 grep -v "^#" /etc/locale.gen
@@ -440,5 +454,140 @@ nano /etc/apache2/conf-available/charset.conf
 decpmmemter #AddDefaultCharset UTF-8
 /etc/apache2/envvars
 decommemnter . /etc/default/locale
-sudo cp /etc/apache2/sites-available/default-ssl.conf /etc/apache2/sites-available/prod-ssl.conf
+--------------------------------------------------------------------------------------------------------------
+http://www.sebsauvage.net/comprendre/ssl/
+Le SSL (Secure Socket Layer) / TLS (Transport Layer Security) est le protocole de sécurité le plus 
+répandu qui créé un canal sécurisé entre deux machines communiquant sur Internet ou un réseau interne.
+Dans le cas des navigateurs, par exemple, les utilisateurs sont avertis de la présence de la sécurité 
+SSL grâce à l'affichage d'un cadenas et du protocole « https » dans l'url, et, dans le cas du SSL à 
+validation étendue, par la barre d'adresse verte
+A l'inverse du « http » non sécurisé qui utilise le port 80 par défaut, le "https" sécurisé utilise le port 443
+TLS (ou SSL) fonctionne suivant un mode client-serveur. Il permet de satisfaire les objectifs de sécurité suivants :
+    l'authentification du serveur ;
+    la confidentialité des données échangées (ou session chiffrée) ;
+    l'intégrité des données échangées ;
+    de manière optionnelle, l'authentification du client (mais dans la réalité celle-ci est 
+	souvent assurée par le serveur).
 
+La négociation SSL ("handshake")
+
+Au début de la communication le client et le serveur s'échangent:
+    la version SSL avec laquelle ils veulent travailler,
+    la liste des méthodes de chiffrement (symétrique et asymétrique) et de signature que chacun connaît (avec longueurs de clés),
+    les méthodes de compression que chacun connaît,
+    des nombres aléatoires,
+    les certificats.
+Client et serveur essaient d'utiliser le protocole de chiffrement le plus puissant et diminuent jusqu'à trouver un protocole commun aux deux. Une fois que cela est fait, ils peuvent commencer à échanger des données.
+
+La communication SSL ("record")
+
+Avec SSL, l'expéditeur des données:
+    découpe les données en paquets,
+    compresse les données,
+    signe cryptographiquement les données,
+    chiffre les données,
+    les envoie.
+
+Celui qui réceptionne les données:
+    déchiffre les données,
+    vérifie la signature des données,
+    décompresse les données,
+    réassemble les paquets de données.
+http://www.sebsauvage.net/comprendre/ssl/
+
+
+
+copier la configuration par defaut
+>> sudo cp /etc/apache2/sites-available/default-ssl.conf /etc/apache2/sites-available/prod-ssl.conf
+
+
+activer le module ssl
+sudo a2enmod ssl
+recharger la configuration d'Apache2
+sudo systemctl reload apache2
+Pour vérifier l'activation du module:
+sudo apache2ctl -M | grep ssl
+
+https://doc.ubuntu-fr.org/apache2#https
+
+module mod_userdir
+l peut être utile, et c'est prévu par Apache, que chaque utilisateur puisse mettre un contenu web à disposition 
+depuis son espace personnel (dans le répertoire home).
+Ce contenu sera accessible à l'adresse http://example.com/~nom_de_lutilisateur, ou dans la plupart des 
+cas : http://localhost/~nom_de_lutilisateur.
+Pour mettre cette configuration en place, on crée un répertoire public_html dans son espace personnel et on lui 
+donne les droits de lecture et d'exécution :
+mkdir ~/public_html
+echo 'Mon site personnel' > ~/public_html/index.html
+chmod -R 755 ~/public_html
+On active ensuite le module mod_userdir :
+sudo a2enmod userdir
+sudo systemctl reload apache2
+Le message Mon site personnel devrait alors être lisible à l'adresse http://localhost/~nom_de_lutilisateur 
+
+
+Le module headers permet de personnaliser les en-têtes HTTP. C'est à dire les informations envoyées par 
+le serveur avant le document lui-même.
+C'est utile notamment pour améliorer la sécurité des sites web. Voici quelques en-têtes qui peuvent être 
+ajoutées à cette fin.
+Pour appliquer globalement les directives proposées, ouvrez (ou créez s'il n’existe pas) le fichier 
+/etc/apache2/mods_available/headers.conf et placez-y ceci : 
+sudo a2enmod headers
+
+Faie ointer DocumentRoot dans prod-ssl.conf point sur le site www/html
+
+Activation finale et redémarrage du serveur apache
+activer le module ssl pour Apache, le virtualhost ssl et redémarrer Apache :
+
+    	a2enmod ssl
+    	a2ensite default-ssl
+	systemctl restart apache2
+
+Faie ointer DocumentRoot dans prod-ssl.conf point sur le site
+sudo a2ensite prod-ssl.conf
+
+generer une cle 
+-out dans /etc/ssl/private/selfsigned.crt
+-keyout /etc/ssl/private/selfsigned.key  self-signed
+
+
+https://www.sqlpac.com/referentiel/docs/apache-2.4-windows-virtual-hosts-locaux-avec-https-ssl-certificats-self-signed.html
+*************************************
+SECONDE METHODE 
+
+sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 -subj "/C=FR/ST=IDF/O=42/OU=Project-roger/CN=10.11.200.247" -keyout /etc/ssl/private/apache-selfsigned.key -out /etc/ssl/certs/apache-selfsigned.crt
+editer fichie param
+Editer /etc/apache2/sites-available/prod-ssl.conf
+editer //etc/apache2/sites-available/000-prod.conf
+
+sudo a2enmod ssl
+sudo a2enmod headers
+sudo a2ensite default-ssl
+sudo a2enconf ssl-params
+systemctl reload apache2
+
+
+
+-------------------------------------------------------------
+
+deploy
+https://git-scm.com/book/fr/v1/Git-sur-le-serveur-Mise-en-place-du-serveur
+
+serveur
+sudo apt-get install git
+creation d'un dossier de git sur le serveur dans le home de polux
+git init --bare ~/www/.git 
+sur client
+	mkdir test_roger	
+	cd ~/Documents/test_roger/
+	git clone ssh://polux://10.11.200.184:1024/~/www/.git
+	git add .
+	git commit
+	git push origin master
+
+sur le serveur
+	mkdir  ~/www/hooks/
+	cd  ~/www/hooks/
+	sudo nano post-receive
+	sudo chmod +x post-receive
+Creation d'un depot de type bare dans le dossier /git git init --bare roger-skyline.git
