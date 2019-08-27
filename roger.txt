@@ -4,8 +4,8 @@ Note pour roger sky line
 A chaque ouverture, faire sudo apt-get update ==> fait par le script update_cron
 
 		>>—————————————————————<<
-1_ Installation de la VM.
-
+			PARTIE VM
+		>>—————————————————————<<
 Install VM 8 000 000 000 000 octets
 VDI
 Partition 
@@ -27,14 +27,12 @@ ou
 >> apt-get install sudo
 >> exit
 
-Ajouter polux au suddoers
->> su -c “sudo adduser polux sudo” root
-
 Installer modules supplementaires a la Debian 
 	net-tools
 	htop
 	ipreoute
 	curl
+
 Installer systemctl pour sshd
 >> sudo apt install policykit-1
 >> sudo apt-get install ufw
@@ -42,34 +40,34 @@ Installer systemctl pour sshd
  
 note: Tester les commanded du shell: https://explainshell.com/explain
 
->> su -c “apt-get upgrade” root
-
+                >>—————————————————————<<
+                PARTIE RESEAU ET SECURITE
+                >>—————————————————————<<
+2_
 >> usermod -aG sudo USER
-	modify a user account
-	-a, --append
-    	Add the user to the supplementary group(s). Use only with the -G option.
-	-G, --groups GROUP1[,GROUP2,...[,GROUPN]]]. A list of supplementary groups which the user is also a member of. Each group is separated from the next by a comma, with no intervening whitespace. The groups are subject to the same restrictions as the group given with the -g option.
+        modify a user account
+        -a, --append
+        Add the user to the supplementary group(s). Use only with the -G option.
+        -G, --groups GROUP1[,GROUP2,...[,GROUPN]]]. A list of supplementary groups whi$
+
+Ajouter polux au suddoers
+>> su -c “sudo adduser polux sudo” root$
 
 Ip du serveur: 
 >> ip address: 
 	ip : 10.11.200.184/16
 	brd : 10.11.255.255
 
-
-Ajouter Utilisateurs no-sudoers
->> su -c "sudo adduser castor" root
 >> sudo reboot
 
 		>>—————————————————————<<
-
+3_
 >> ip a show enp0s3 --> affiche uniquement la carte reseau
 >> ip a -—> avant chaque session
-
 
 Verifier le fichier `INTERFACES`
 >> sudo nano /etc/network/interfaces
 		
-		*******
 Verifier la config
 Sous le réseau de 42, car branche sur une machine fournissant une adresse automatique via  DHCP 
 	allow-hotplug enp0s3
@@ -83,6 +81,7 @@ Pour valider les modifs
 >> sudo reboot
 
 		>>—————————————————————<<
+3_
 Pour verifier ssh installe cote serveur 
 >> apt-cache policy openssh-server	
 Ou	>> ls -la /etc/ssh/sshd-config
@@ -101,8 +100,8 @@ Verifier les ports de connection
 sur le serveur, Faire une copie du fichier sshd_config
 >> sudo cp /etc/ssh/sshd_config /etc/ssh/sshd_config.bck
 Editer le fichier ssh-config pour changer le port
->> sudo vi /etc/ssh/sshd_config
-	#Port 22 --> Port 1024
+>> sudo nano  /etc/ssh/sshd_config
+	#Port 22 --> Port 5432
 
 Redemarrer ssh
 service se trouve dans le PATH de root mais pas d'un user (/usr/sbin/service) donc sudo
@@ -111,7 +110,8 @@ service se trouve dans le PATH de root mais pas d'un user (/usr/sbin/service) do
  
 Generer les cles
 Chez client
->> ssh-keygen -t rsa(/Users/schatagn/.ssh/id_rsa)poluxkeys
+>> ssh-keygen -t rsa
+	place dans (/Users/schatagn/.ssh/id_rsa) mdp: qwerty
 >> ssh-copy-id -i ~/.ssh/id_rsa.pub -p 1024 “polux@10.11.200.184”
 			-p pour changer du port 22 
 			-i pour le chemin des clefs
