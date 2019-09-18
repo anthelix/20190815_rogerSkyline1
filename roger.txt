@@ -12,13 +12,15 @@ Partition
 	manuel
 	sc3…
 	Partition = 4.2
-Hostname: Debian
+Hostname: debian
 Password root : pwdroot
 User: polux : 2019
 
 mise a jour:
->> su -c "apt update && apt upgrade" root
->> su -c "apt install sudo" root”
+su -c "apt-get update && apt-get upgrade" root
+su -c "apt install sudo" root”
+su -c “sudo adduser polux sudo” root
+exit
 
 ou
 
@@ -37,6 +39,8 @@ Installer systemctl pour sshd
 >> sudo apt install policykit-1
 >> sudo apt-get install ufw
 >> sudo apt install fail2ban
+>> sudo apt install portsentry
+
  
 note: Tester les commanded du shell: https://explainshell.com/explain
 
@@ -49,21 +53,27 @@ note: Tester les commanded du shell: https://explainshell.com/explain
         -a, --append
         Add the user to the supplementary group(s). Use only with the -G option.
         -G, --groups GROUP1[,GROUP2,...[,GROUPN]]]. A list of supplementary groups whi$
+su -c “sudo adduser castor sudo” root
+
 
 Ajouter polux au suddoers
 >> su -c “sudo adduser polux sudo” root$
 
 Ip du serveur: 
 >> ip address: 
-	ip : 10.11.200.184/16
+	ip : 10.11.200.107/16
 	brd : 10.11.255.255
 
 >> sudo reboot
 
-		>>—————————————————————<<
+				>>—————————————————————<<
 3_
 >> ip a show enp0s3 --> affiche uniquement la carte reseau
 >> ip a -—> avant chaque session
+
+                >>—————————————————————<<
+                3 configurer afin qu’elle ait une IP fixe et un Netmask en /30.
+                >>—————————————————————<<
 
 Verifier le fichier `INTERFACES`
 >> sudo nano /etc/network/interfaces
@@ -74,14 +84,16 @@ Sous le réseau de 42, car branche sur une machine fournissant une adresse autom
 	iface eth0 inet dhcp
 Une fois mon réseau créer:
 	iface enp0s3 inet static
-	address 10.1f.x.y —> 10.11.200.184/30
+	address 10.1f.x.y —> 10.11.200.107/30
 	netmask 30
 	gateway 10.1f.254.254 -> 10.11.254.254
 Pour valider les modifs 
 >> sudo reboot
 
-		>>—————————————————————<<
-3_
+                >>—————————————————————<<
+                4 changer le port par defaut du service SSH
+                >>—————————————————————<<
+
 Pour verifier ssh installe cote serveur 
 >> apt-cache policy openssh-server	
 Ou	>> ls -la /etc/ssh/sshd-config
@@ -99,9 +111,11 @@ Verifier les ports de connection
 
 sur le serveur, Faire une copie du fichier sshd_config
 >> sudo cp /etc/ssh/sshd_config /etc/ssh/sshd_config.bck
+
 Editer le fichier ssh-config pour changer le port
 >> sudo nano  /etc/ssh/sshd_config
-	#Port 22 --> Port 5432
+	#Port 22 --> Port 54321
+
 
 Redemarrer ssh
 service se trouve dans le PATH de root mais pas d'un user (/usr/sbin/service) donc sudo
@@ -110,28 +124,37 @@ service se trouve dans le PATH de root mais pas d'un user (/usr/sbin/service) do
  
 Generer les cles
 Chez client
->> ssh-keygen -t rsa
+>> ssh-keygen -t rsa -b 4096
 	place dans (/Users/schatagn/.ssh/id_rsa) mdp: qwerty
->> ssh-copy-id -i ~/.ssh/id_rsa.pub -p 1024 “polux@10.11.200.184”
+>> chmod 400 ~/.ssh/id_rsa
+
+>> ssh-copy-id -i /Users/schatagn/.ssh/id_rsa.pub -p 54321 "polux@10.11.200.107"
 			-p pour changer du port 22 
 			-i pour le chemin des clefs
+>> ssh -p 54321 polux@10.11.200.107
 
 The sshd (OpenSSH Daemon) is the daemon program for ssh. Server side ssh configuration is defined 
 in /etc/ssh/sshd_config file on Linux operating system. The ssh is the client program for sshd daemon. 
 You need to use DenyUsers option to block access to root user on Linux. Another option to block root 
 user access is to set PermitRootLogin to no in sshd_config file
+sur le serveur 
+>> chmod 700 ~/.ssh
+>> hmod 600 ~/.ssh/authorized_keys 
 
 Dans le dichier /etc/ssh/sshd_config
 	PermitRootLogin no
-	DenyUsers root
+	DenyUsers root 
 	PasswordAuthentication no
 
-Pour teste si efficace : ssh root@10.11.200.184
+Pour teste si efficace : ssh root@10.11.200.107 -p 54321
 
-		>>—————————————————————<<
+                >>—————————————————————<<
+                5 pare-feu (firewall)
+                >>—————————————————————<<
 
 >> sudo apt-get install ufw
 >> sudo ufw status
+>> sudo ufw enable
 
 Pour lister les services: 
 >>less /etc/services
@@ -140,12 +163,22 @@ Les ports a l’ecoute
 >> sudo netstat -tnplv
 
 >> sudo ufw enable
-!!!!!!Sudo uff status verbose
->> sudo ufw allow 1024/tcp
+!!!!!!Sudo ufw status verbose
+>> sudo ufw allow 54321/tcp
 >> sudo ufw allow http/tcp (port 80/tcp)
 >> sudo ufw allonow 443. Authorizer https 
+allow 53
+allow git
 >> sudo ufw deny 22
 >> sudo ufw reload
+
+
+
+
+
+                >>—————————————————————<<
+                6 protection contre les DOS
+                >>—————————————————————<<
 
 		>>—————————————————————<<  revoir la config de jail.local ******************************************************************
 
@@ -173,13 +206,25 @@ jail.local appelle les filtres de filter.d
 bantime = Il définit en secondes combien de temps doit être bannie l’ip : 3600 = 1h
 findtime = Il définit en seconde jusqu’ou dans le temps doit remonter fail2ban 
 	lors de sa lecture ou relecture des logs. 3600 = 1h
-–maxretry = le nombre d’essai infructueux autorisés avant banissement
+–maxretry = le nombre d’essai tueux autorisés avant banissement
 
-	Decommenter : [sshd] et [DEFAULT] ******
+	sshd] et [DEFAULT] ******
 	bantime=600
 	findtime=600
 	maxretry=3
 
+	enabled = true
+port    = 1337
+logpath = %(sshd_log)s
+backend = %(sshd_backend)s
+bantime = 600
+findtime = 600
+maxretry = 3
+
+# systemctl enable fail2ban
+# systemctl start fail2ban
+
+fail2ban-client status
 Pour tester, se connecter avec un faux code depuis le client
 
 		>>—————————————————————<<
@@ -188,7 +233,7 @@ portsentry est un programme de détection et de blocage de "scan de ports" (gén
 programme qui scanne votre machine à le recherche de ports ouverts, en général dans 
 le but de préparer une attaque). 
 Si vous choisissez le mode atcp et audp dans /etc/defaults/portsentry, inutile de préciser 
-les ports; Portsentry va vérifier les ports utilisés et automatiquement "lier" les ports 
+les ports; P#ortsentry va vérifier les ports utilisés et automatiquement "lier" les ports 
 disponibles. C'est l'options la plus efficace ("a" signifie avancé). Avec cette options, 
 portsentry établit une liste des ports d'écoute, TCP et UDP, et bloque l'hôte se connectant 
 sur ​​ces ports, sauf s'il est présent dans le fichier portsentry.ignore.
@@ -206,8 +251,9 @@ Dans le fichier /etc/default/portsentry, écrire
 
 BLOCK_UDP="1"
 BLOCK_TCP="1"
-
-		>>—————————————————————<<
+                >>—————————————————————<<
+                7 protection contre les DOS
+                >>—————————————————————<<
 Lister les services en cours” enabled”
 >> systemctl list-unit-files --state=enabled
 >> systemctl list-unit-files --show-types | grep "enabled"
@@ -244,8 +290,12 @@ man-db.timer                                                   o enabled —> do
 >> sudo systemctl disable syslog.service
 
 >> sudo service portsentry restart
+>> pour tester schatagn@e1r9p12.42.fr nmap -v 10.11.200.107
 
-		>>—————————————————————<<
+
+                >>—————————————————————<<
+                8 CRON
+                >>—————————————————————<<
 cron
 
 • Réalisez un script qui met à jour l’ensemble des sources de package, puis de vos 
@@ -295,17 +345,19 @@ pas être modifiés directement mais via la commande `crontab`
 “Il existe également un fichier /etc/crontab qu’il n’est pas recommandé de modifier, mais plutôt d’utiliser la méthode 
 précédente (tâches de l’utilisateur)”.
 
+MAILTO=""
 >> sudo systemctl enable cron
 >> cat /etc/crontab
 >> crontab -l : afficher crontab
->> crontab -e :  modifier la crontab et le creer si n’existe pas pas 
-	    @reboot root sh /home/
-	    0 4 * * 0 root sh /
+>> sudo crontab -e :  modifier la crontab et le creer si n’existe pas pas 
+	    @reboot sh /home/polux/script/update_cron.sh
+	    0 4 * * 0 root sh /home/polux/script/update_cron.sh
+		0 0 * * * sh /home/polux/script/crontab_scrutiny.sh
 Pour exécuter une commande une seule fois, juste après le démarrage de l'ordinateur, on peut recourir à la macro 
 @reboot (un simple redémarrage de cron ne déclenche pas une commande planifiée avec @reboot). Cette macro remplace 
 elle aussi les cinq premiers champs d'une entrée dans la crontab. 
 
-@reboot root sh /home/
+
 
 ******************
 Pour avoir le journal de log de cron:
@@ -314,7 +366,7 @@ Pour avoir le journal de log de cron:
 Decommenter # devant cron
 >> sudo service rsyslog restart
 >> sudo service cron restart
->> tail -f /var/log/cron.log
+>> sudo tail -f /var/log/cron.log
 ******************
 log_file='/var/log/update_script.log'
 
@@ -414,10 +466,11 @@ cela pourra vous éviter des résultats bizarres liés au fait d'avoir oublié d
 Dans /etc/apache2/sites-available, faire 
 >> sudo nano /etc/apache2/apache2.conf
 ajouter en fin de fichier
->> ServerName 10.11.200.184
+>> ServerName 10.11.200.107
 Evite message d'erreur de Apache2
 
->> mkdir /var/www/html
+>> cd /var/www/html
+
 pour garder fichier propre copie de travail
 >> sudo cp /etc/apache2/sites-available/000-default.conf /etc/apache2/sites-available/000-prod.conf
 >> sudo nano /etc/apache2/sites-available/000-prod.conf
@@ -561,7 +614,7 @@ https://www.sqlpac.com/referentiel/docs/apache-2.4-windows-virtual-hosts-locaux-
 *************************************
 SECONDE METHODE 
 
-sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 -subj "/C=FR/ST=IDF/O=42/OU=Project-roger/CN=10.11.200.247" -keyout /etc/ssl/private/apache-selfsigned.key -out /etc/ssl/certs/apache-selfsigned.crt
+sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 -subj "/C=FR/ST=IDF/O=42/OU=Project-roger/CN=10.11.200.107" -keyout /etc/ssl/private/apache-selfsigned.key -out /etc/ssl/certs/apache-selfsigned.crt
 editer fichie param
 Editer /etc/apache2/sites-available/prod-ssl.conf
 editer /etc/apache2/sites-available/000-prod.conf
@@ -571,6 +624,10 @@ sudo a2enmod headers
 sudo a2ensite default-ssl
 sudo a2enconf ssl-params
 systemctl reload apache2
+
+sudo journalctl -xe
+sudo systemctl -l status apache2q
+
 
 		>>—————————————————————<<
 
@@ -585,7 +642,8 @@ creation d'un dossier de git sur le serveur dans le home de polux
 sur client
 	mkdir test_roger	
 	cd ~/Documents/test_roger/
-	git clone ssh://polux://10.11.200.184:1024/~/www/.git
+	git clone ssh://polux@10.11.200.107:54321/~/www/.git
+	cd www
 	git add .
 	git commit
 	git push origin master
@@ -595,4 +653,61 @@ sur le serveur
 	cd  ~/www/hooks/
 	sudo nano post-receive
 	sudo chmod +x post-receive
-Creation d'un depot de type bare dans le dossier /git git init --bare roger-skyline.git
+Creation d'un depot de type bare dans le dossier /git git init --bare roger-skyl
+ine.git
+
+
+
+DISTANT-USER=polux
+SERVER_HOST=10.11.200.107
+DEPLOY-FOLDER:/var/www
+BARE-REPOSITORY-FOLDER=/home/polux/deploy
+PROJECT-NAME=projectRoger
+BRANCH-TO-DEPLOY=master
+WORKING-DIRECTORY=test_deploy
+REMOTE-SERVER=preprod
+
+
+connection ssh 
+>> schatagn@e1r9p12  ~/Documents  ssh -p 54321 polux@10.11.200.107
+creation du dossier a deployer sur le serveur distant
+>> polux@debian:~$ mkdir /var/www
+
+creation du depot de deploiemnet
+	creation du dossier contenant le depot sur le serveur distant
+	>> polux@debian:~$ mkdir /home/polux/deploy
+	creation du depot
+	>> polux@debian:~$ cd /home/polux/deploy
+	>> polux@debian:~/deploy$ git init --bare projectRoger.git
+
+	
+mettre en place un hook post-receive, qui va se déclancher après la réception
+on va executer un script bash une fois que le déplot de déploiement va recevoir un push
+	creer le dossier hookks
+	>> polux@debian:~/deploy$ cd /home/polux/deploy/projectRoger.git/hooks
+	>> ecrire le script : ce script va regarder quelle branche est envoyé sur le dépot. 
+	Si elle correspond à BRANCH-TO-DEPLOY elle va déployer le code dans le dossier DEPLOY-FOLDER.
+
+
+
+Ajouter depot externe sur la machine de dev
+	>> schatagn@e1r9p12 ~/Documents mkdir test_deploy
+	>> schatagn@e1r9p12 ~/Documents cd test_deploy
+	>> schatagn@e1r9p12 ~/Documents/test_deploy git init
+	
+	>> schatagn@e1r9p12 ~/Documents/test_deploy touch essai
+	>> schatagn@e1r9p12 ~/Documents/test_deploy git add .
+	>> schatagn@e1r9p12 ~/Documents/test_deploy git commit -m "first commit"
+	preprod est le no qu'on donne au serveur distant
+	>> schatagn@e1r9p12 ~/Documents/test_deploy git remote add preprod polux@10.11.200.107:54321/home/polux/deploy/projectRoger.git
+
+rm -rf test_deploy
+
+changement utilisateur qui fait les push
+changer les dreoits /var/www/html
+modifier git local config user 'polux'
+modifier .ssh de schatagner pour ls ports
+
+
+
+ansible
